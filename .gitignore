@@ -2,3 +2,4 @@ trash/
 .*.swp
 *.pyc
 __pycache__/
+user.pkl

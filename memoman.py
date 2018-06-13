@@ -3,7 +3,7 @@
 # -*- coding: utf-8 -*-
 #==============================
 #    Author: Elun Dai
-#    Last modified: 2018-06-13 10:24
+#    Last modified: 2018-06-13 14:48
 #    Filename: memoman.py
 #    Description:
 #    
@@ -58,6 +58,7 @@ class Memoman:
         else:
             raise ValueError('cell is not a list or ndarray or nan')
 #             return [cell, item]
+
 
     def update(self, word_dicts):
         # if .loc 
@@ -146,7 +147,10 @@ class Memoman:
             df = df.drop(wipe_out)
 
         if from_studying > 0:
+            # BUG: when df is empty or none of score in df
             words = words.append(df.loc[score.index[:int((total - len(words)) * from_studying)]])
+            # BUG: df contain duplicate columns
+#             words = words.append(df.reindex(index=score.index[:int((total - len(words)) * from_studying)]))
 
         # from df - words
         words = words.append(df.drop(words.index).sample(total - len(words)))
@@ -157,11 +161,14 @@ class Memoman:
         repeat_last = False
         while True:
             if repeat_last is False:
-                words = self.get_list(N_PER_LIST)
+                words = self.get_list(N_PER_LIST, from_studying=REVIEW_PROPOTION)
             else:
                 repeat_last = False
 
-            self.show_words(words)
+            pass_test = False
+            while pass_test is False:
+                self.show_words(words)
+                pass_test = self.test_memo(words)
 
             word_dicts = self.question(words)
 #             if not isinstance(word_dicts, dict):
@@ -227,6 +234,51 @@ class Memoman:
             print(word.word)
             input()
             os.system('clear')
+
+    def test_memo(self, words):
+        correct = []
+        pass_test = False
+        N_COLUMN = 5
+        format_str = '{:18}' * N_COLUMN
+        for round_n in range(N_TEST_MEMO):
+            # if n_in_words get 1, expand the number of words to [1, 2, 3]
+            # i.e. 50% get 0, and 1, 2, 3 share the rest
+            n_in_words = np.random.randint(0, 2) * np.random.randint(1, 4)
+            contain = words.word.sample(n_in_words)
+            choises = self.get_list(20, from_studying=0.5, contain=contain, wipe_out=words.word.drop(contain))
+            choises_l = choises.word.as_matrix().reshape(-1, N_COLUMN)
+            # print choises
+            os.system('clear')
+            print('test memory {}/{}'.format(round_n+1, N_TEST_MEMO))
+            print()
+            for row in choises_l:
+                print(format_str.format(*row))
+
+            print()
+            ret = input('what is the number of words you studied just now? (If none of them, press enter).\n\tyour answer: ')
+            if ret is '':
+                ret = 0
+            if int(ret) is n_in_words:
+                correct.append(True)
+            else:
+                correct.append(False)
+
+            if len(contain) > 0:
+                print()
+                print('words in this list:')
+                print(', '.join(contain))
+                print()
+                input('Press enter ...')
+            elif int(ret) is not 0:
+                print('Wrong! None of them contained in the list.')
+                input('')
+
+
+        grade = np.sum(correct) / len(correct)
+        if grade > 0.8:
+            pass_test = True
+
+        return pass_test
 
     def question(self, words):
 #         try:
