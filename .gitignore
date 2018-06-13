@@ -1,0 +1,4 @@
+trash/
+.*.swp
+*.pyc
+__pycache__/
